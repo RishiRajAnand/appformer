@@ -112,15 +112,16 @@ public class SubdirectoryClone {
              hookDir,
              JGitFileSystemProviderConfiguration.DEFAULT_GIT_HTTP_SSL_VERIFY);
     }
+
     /**
-     * @param directory Directory for the local target repository (created by this command). Must not be null.
-     * @param origin URI for the repository being cloned. Must not be null.
-     * @param subdirectory The subdirectory within the origin being copied. Must not be null.
-     * @param branches The branches that should be copied. Must not be null.
+     * @param directory           Directory for the local target repository (created by this command). Must not be null.
+     * @param origin              URI for the repository being cloned. Must not be null.
+     * @param subdirectory        The subdirectory within the origin being copied. Must not be null.
+     * @param branches            The branches that should be copied. Must not be null.
      * @param credentialsProvider Provides credentials for the initial cloning of the origin. May be null.
-     * @param leaders Used for initial cloning. May be null.
-     * @param hookDir Used to specify the directory containing the Git Hooks to add to the repository. May be null.
-     * @param sslVerify Used to disable http ssl verify on the repository
+     * @param leaders             Used for initial cloning. May be null.
+     * @param hookDir             Used to specify the directory containing the Git Hooks to add to the repository. May be null.
+     * @param sslVerify           Used to disable http ssl verify on the repository
      */
     public SubdirectoryClone(final File directory,
                              final String origin,
@@ -155,7 +156,7 @@ public class SubdirectoryClone {
         final Repository repository = git.getRepository();
 
         try (final ObjectReader reader = repository.newObjectReader();
-                final ObjectInserter inserter = repository.newObjectInserter()) {
+             final ObjectInserter inserter = repository.newObjectInserter()) {
             // Map all transformed commits that are non-empty so that we can properly map parents
             final Map<ObjectId, ObjectId> commitMap = new HashMap<>();
             final RevWalk revWalk = createRevWalk(repository, reader);
@@ -183,8 +184,8 @@ public class SubdirectoryClone {
     }
 
     private void overrideBranchNames(final Repository repository,
-                           final RevWalk revWalk,
-                           final Map<ObjectId, ObjectId> commitMap) throws AmbiguousObjectException, IncorrectObjectTypeException, IOException, MissingObjectException, GitAPIException, RefAlreadyExistsException, RefNotFoundException, InvalidRefNameException {
+                                     final RevWalk revWalk,
+                                     final Map<ObjectId, ObjectId> commitMap) throws AmbiguousObjectException, IncorrectObjectTypeException, IOException, MissingObjectException, GitAPIException, RefAlreadyExistsException, RefNotFoundException, InvalidRefNameException {
         for (String branchName : branches) {
             if (branchName.equals("HEAD")) {
                 continue;
@@ -194,12 +195,12 @@ public class SubdirectoryClone {
             final ObjectId newBranchTipId = closestMappedAncestorOrSelf(commitMap, revWalk.parseCommit(oldBranchTipId))[0];
             final RevCommit newBranchTip = revWalk.parseCommit(newBranchTipId);
             org.eclipse.jgit.api.Git.wrap(repository)
-                                    .branchCreate()
-                                    .setName(branchName)
-                                    .setForce(true)
-                                    .setStartPoint(newBranchTip)
-                                    .setUpstreamMode(SetupUpstreamMode.NOTRACK)
-                                    .call();
+                    .branchCreate()
+                    .setName(branchName)
+                    .setForce(true)
+                    .setStartPoint(newBranchTip)
+                    .setUpstreamMode(SetupUpstreamMode.NOTRACK)
+                    .call();
         }
     }
 
@@ -254,6 +255,12 @@ public class SubdirectoryClone {
     private Optional<ObjectId> filterCommitTree(final ObjectReader reader,
                                                 final ObjectInserter inserter,
                                                 final RevCommit commit) throws MissingObjectException, IncorrectObjectTypeException, CorruptObjectException, IOException, UnmergedPathException {
+
+        // Added as a workaround for RHPAM-2809, The hashset ensures that git DirCache doesn't have a duplicate value
+        // when we have similiar entries as result of copying a file into the exact same location.
+
+        final Set<String> gitCacheSet = new HashSet<>();
+
         final DirCache dc = DirCache.newInCore();
         final DirCacheEditor editor = dc.editor();
         @SuppressWarnings("resource")
@@ -264,9 +271,10 @@ public class SubdirectoryClone {
         while (treeWalk.next()) {
             final String pathString = treeWalk.getPathString();
             final CanonicalTreeParser treeParser = treeWalk.getTree(treeId, CanonicalTreeParser.class);
-            if (inSubdirectory(pathString)) {
+            if (inSubdirectory(pathString) && !gitCacheSet.contains(pathString)) {
                 moveFromSubdirectoryToRoot(editor, pathString, treeParser);
                 empty = false;
+                gitCacheSet.add(pathString);
             }
         }
         editor.finish();
@@ -276,7 +284,6 @@ public class SubdirectoryClone {
         } else {
             return Optional.of(dc.writeTree(inserter));
         }
-
     }
 
     private RevWalk createRevWalk(final Repository repository, final ObjectReader reader) throws MissingObjectException, IncorrectObjectTypeException, IOException {
