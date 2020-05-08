@@ -466,6 +466,7 @@ public class JobRequestHelper {
 
     public JobResult createSpace(final String jobId,
                                  final String spaceName,
+                                 final String spaceDescription,
                                  final String spaceOwner,
                                  final String defaultGroupId) {
         JobResult result = new JobResult();
@@ -502,7 +503,8 @@ public class JobRequestHelper {
         organizationalUnit = organizationalUnitService.createOrganizationalUnit(spaceName,
                                                                                 _defaultGroupId,
                                                                                 Collections.emptyList(),
-                                                                                Collections.singletonList(new Contributor(spaceOwner, ContributorType.OWNER)));
+                                                                                Collections.singletonList(new Contributor(spaceOwner, ContributorType.OWNER)),
+                                                                                spaceDescription);
 
         if (organizationalUnit != null) {
             result.setResult("Space " + organizationalUnit.getName() + " is created successfully.");

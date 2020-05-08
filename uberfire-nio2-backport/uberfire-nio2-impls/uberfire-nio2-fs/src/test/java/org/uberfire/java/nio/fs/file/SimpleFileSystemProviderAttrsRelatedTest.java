@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.uberfire.java.nio.base.BasicFileAttributesImpl;
 import org.uberfire.java.nio.base.GeneralPathImpl;
@@ -64,6 +65,7 @@ public class SimpleFileSystemProviderAttrsRelatedTest {
                 .hasMessage("Parameter named 'path' should be not null!");
     }
 
+    @Ignore
     @Test
     public void checkAccess() throws IOException {
         final SimpleFileSystemProvider fsProvider = new SimpleFileSystemProvider();
