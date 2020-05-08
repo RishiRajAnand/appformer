@@ -27,6 +27,7 @@ import org.guvnor.rest.backend.cmd.AbstractJobCommand;
 import org.guvnor.rest.backend.cmd.AddProjectToSpaceCmd;
 import org.guvnor.rest.backend.cmd.CloneRepositoryCmd;
 import org.guvnor.rest.backend.cmd.CompileProjectCmd;
+import org.guvnor.rest.backend.cmd.CreateGroupCmd;
 import org.guvnor.rest.backend.cmd.CreateProjectCmd;
 import org.guvnor.rest.backend.cmd.CreateSpaceCmd;
 import org.guvnor.rest.backend.cmd.DeleteProjectCmd;
@@ -39,6 +40,7 @@ import org.guvnor.rest.client.AddBranchJobRequest;
 import org.guvnor.rest.client.AddProjectToSpaceRequest;
 import org.guvnor.rest.client.CloneProjectJobRequest;
 import org.guvnor.rest.client.CompileProjectRequest;
+import org.guvnor.rest.client.CreateGroupRequest;
 import org.guvnor.rest.client.CreateProjectJobRequest;
 import org.guvnor.rest.client.DeleteProjectRequest;
 import org.guvnor.rest.client.DeployProjectRequest;
@@ -198,6 +200,17 @@ public class JobRequestScheduler {
 
         scheduleJob(jobRequest,
                     new CreateSpaceCmd(jobRequestHelper,
+                                       jobResultManager,
+                                       params));
+    }
+
+    public void createGroupRequest(final CreateGroupRequest jobRequest) {
+        final Map<String, Object> params = getContext(jobRequest);
+        params.put("Operation",
+                   "createGroup");
+
+        scheduleJob(jobRequest,
+                    new CreateGroupCmd(jobRequestHelper,
                                        jobResultManager,
                                        params));
     }

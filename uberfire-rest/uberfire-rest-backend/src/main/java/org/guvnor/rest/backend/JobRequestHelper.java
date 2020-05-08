@@ -50,10 +50,13 @@ import org.guvnor.structure.organizationalunit.impl.OrganizationalUnitImpl;
 import org.guvnor.structure.repositories.RepositoryEnvironmentConfigurations;
 import org.guvnor.structure.repositories.RepositoryService;
 import org.guvnor.structure.repositories.impl.git.GitRepository;
+import org.jboss.errai.security.shared.api.Group;
+import org.jboss.errai.security.shared.api.GroupImpl;
 import org.kie.soup.commons.validation.PortablePreconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uberfire.backend.server.util.Paths;
+import org.uberfire.ext.security.management.api.service.GroupManagerService;
 import org.uberfire.io.IOService;
 import org.uberfire.rpc.SessionInfo;
 import org.uberfire.java.nio.file.FileAlreadyExistsException;
@@ -86,6 +89,9 @@ public class JobRequestHelper {
 
     @Inject
     private OrganizationalUnitService organizationalUnitService;
+
+    @Inject
+    GroupManagerService groupManagerService;
 
     @Inject
     private TestRunnerService testService;
@@ -512,6 +518,36 @@ public class JobRequestHelper {
         }
         return result;
     }
+
+    public JobResult createGroup(final String jobId,
+                                 final String groupName,
+                                 final List<String> users) {
+
+        JobResult result = new JobResult();
+        result.setJobId(jobId);
+
+        if (groupName == null) {
+            result.setStatus(JobStatus.BAD_REQUEST);
+            result.setResult("Group name cannot be empty");
+            return result;
+        }
+        Group group = groupManagerService.get(groupName);
+        if(group !=  null) {
+            result.setStatus(JobStatus.BAD_REQUEST);
+            result.setResult("Group with name " + groupName + " already exists");
+            return result;
+        }
+
+        group = groupManagerService.create(new GroupImpl(groupName));
+        if (group != null) {
+            result.setResult("Group " + group.getName() + " is created successfully.");
+            result.setStatus(JobStatus.SUCCESS);
+        } else {
+            result.setStatus(JobStatus.FAIL);
+        }
+        return result;
+    }
+
 
     public JobResult addBranch(final String jobId,
                                final String spaceName,
