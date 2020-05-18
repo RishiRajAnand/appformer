@@ -42,6 +42,9 @@ import org.guvnor.common.services.shared.test.TestRunnerService;
 import org.guvnor.rest.client.CloneProjectRequest;
 import org.guvnor.rest.client.JobResult;
 import org.guvnor.rest.client.JobStatus;
+import org.guvnor.rest.client.Permission;
+import org.guvnor.rest.client.ResourcePermissionException;
+import org.guvnor.rest.client.UpdatePermissionsRequest;
 import org.guvnor.structure.contributors.Contributor;
 import org.guvnor.structure.contributors.ContributorType;
 import org.guvnor.structure.organizationalunit.OrganizationalUnit;
@@ -55,13 +58,22 @@ import org.jboss.errai.security.shared.api.GroupImpl;
 import org.kie.soup.commons.validation.PortablePreconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.uberfire.backend.authz.AuthorizationService;
 import org.uberfire.backend.server.util.Paths;
+import org.uberfire.ext.security.management.api.exception.GroupNotFoundException;
 import org.uberfire.ext.security.management.api.service.GroupManagerService;
 import org.uberfire.io.IOService;
 import org.uberfire.rpc.SessionInfo;
 import org.uberfire.java.nio.file.FileAlreadyExistsException;
+import org.uberfire.security.ResourceAction;
+import org.uberfire.security.ResourceType;
+import org.uberfire.security.authz.AuthorizationPolicy;
+import org.uberfire.security.authz.PermissionCollection;
+import org.uberfire.security.authz.PermissionManager;
 import org.uberfire.spaces.Space;
 import org.uberfire.spaces.SpacesAPI;
+
+import static org.uberfire.workbench.model.ActivityResourceType.PERSPECTIVE;
 
 /**
  * Utility class to perform various functions for the REST service involving backend services
@@ -70,6 +82,16 @@ import org.uberfire.spaces.SpacesAPI;
 public class JobRequestHelper {
 
     private static final Logger logger = LoggerFactory.getLogger(JobRequestHelper.class);
+
+    public static final ResourceType PROJECT_TYPE = () -> "project";
+    public static final ResourceType SPACE_TYPE = () -> "orgunit";
+    public static final ResourceType PERSPECTIVE_TYPE = () -> "perspective";
+    public static final ResourceType EDITOR_TYPE = () -> "editor";
+
+    public static final ResourceAction CREATE = () -> "create";
+    public static final ResourceAction READ = () -> "read";
+    public static final ResourceAction EDIT = () -> "update";
+    public static final ResourceAction DELETE = () -> "delete";
 
     @Inject
     private RepositoryService repositoryService;
@@ -92,6 +114,12 @@ public class JobRequestHelper {
 
     @Inject
     GroupManagerService groupManagerService;
+
+    @Inject
+    AuthorizationService authorizationService;
+
+    @Inject
+    PermissionManager permissionManager;
 
     @Inject
     private TestRunnerService testService;
@@ -531,21 +559,147 @@ public class JobRequestHelper {
             result.setResult("Group name cannot be empty");
             return result;
         }
-        Group group = groupManagerService.get(groupName);
-        if(group !=  null) {
+        Group group;
+        try {
+             group = groupManagerService.get(groupName);
+            if(group !=  null) {
+                result.setStatus(JobStatus.BAD_REQUEST);
+                result.setResult("Group with name " + groupName + " already exists");
+            }
+        } catch (GroupNotFoundException e) {
+            group = groupManagerService.create(new GroupImpl(groupName));
+            groupManagerService.assignUsers(groupName, users);
+            if (group != null) {
+                result.setResult("Group " + group.getName() + " is created successfully.");
+                result.setStatus(JobStatus.SUCCESS);
+            } else {
+                result.setStatus(JobStatus.FAIL);
+            }
+        }
+        return result;
+    }
+
+    public JobResult removeGroup(final String jobId,
+                                 final String groupName) {
+        JobResult result = new JobResult();
+        result.setJobId(jobId);
+
+        if (groupName == null) {
             result.setStatus(JobStatus.BAD_REQUEST);
-            result.setResult("Group with name " + groupName + " already exists");
+            result.setResult("Group name must be provided");
             return result;
         }
 
-        group = groupManagerService.create(new GroupImpl(groupName));
-        if (group != null) {
-            result.setResult("Group " + group.getName() + " is created successfully.");
+        try {
+            groupManagerService.delete(groupName);
             result.setStatus(JobStatus.SUCCESS);
-        } else {
+            result.setResult("Group " + groupName + " is deleted successfully.");
+        } catch (Exception e) {
             result.setStatus(JobStatus.FAIL);
+            String errMsg = e.getClass().getSimpleName() + " thrown when trying to remove '" + groupName + "': " + e.getMessage();
+            result.setResult(errMsg);
+            logger.error(errMsg,
+                         e);
         }
+
         return result;
+    }
+
+    public JobResult updateGroupPermissions(final String jobId,
+                                 final String groupName,
+                                 final UpdatePermissionsRequest permissionsRequest) {
+
+        JobResult result = new JobResult();
+        result.setJobId(jobId);
+
+        if (groupName == null) {
+            result.setStatus(JobStatus.BAD_REQUEST);
+            result.setResult("Group name cannot be empty");
+            return result;
+        }
+
+        try {
+            Group group = groupManagerService.get(groupName);
+            AuthorizationPolicy authzPolicy = permissionManager.getAuthorizationPolicy();
+//        role.admin.permission.project.update=true
+            PermissionCollection pc = authzPolicy.getPermissions(group);
+            generatePermissionCollection(pc, permissionsRequest);
+            authzPolicy.setPermissions(group, pc);
+            authorizationService.savePolicy(authzPolicy);
+
+            result.setStatus(JobStatus.SUCCESS);
+            result.setResult("Group" + groupName + " permissions are updated successfully.");
+
+        } catch (GroupNotFoundException e) {
+                result.setStatus(JobStatus.BAD_REQUEST);
+                result.setResult("Group with name " + groupName + "doesn't exists");
+
+        } catch (Exception e) {
+            result.setStatus(JobStatus.FAIL);
+            String errMsg = e.getClass().getSimpleName() + " thrown when trying to update permissions for  '" + groupName + "': " + e.getMessage();
+            result.setResult(errMsg);
+            logger.error(errMsg,
+                         e);
+        }
+
+        return result;
+    }
+
+    private PermissionCollection generatePermissionCollection(PermissionCollection pc, UpdatePermissionsRequest permissionRequest) {
+        if (permissionRequest.getPages() != null) {
+            addToCollection(pc, PERSPECTIVE_TYPE, permissionRequest.getPages());
+        }
+        if (permissionRequest.getSpaces() != null) {
+            addToCollection(pc, SPACE_TYPE,permissionRequest.getSpaces());
+        }
+        if (permissionRequest.getProject() != null) {
+            addToCollection(pc, PROJECT_TYPE, permissionRequest.getProject());
+        }
+        if (permissionRequest.getEditor() != null) {
+            addToCollection(pc, EDITOR_TYPE, permissionRequest.getEditor());
+        }
+        return pc;
+    }
+
+    private void addToCollection(PermissionCollection pc, ResourceType resourceType, Permission permission) {
+
+        if (permission.isRead() != null) {
+            pc.add(permissionManager.createPermission(resourceType, READ, permission.isRead()));
+        }
+        if (permission.isCreate() != null) {
+            pc.add(permissionManager.createPermission(resourceType, CREATE, permission.isCreate()));
+        }
+        if (permission.isUpdate() != null) {
+            pc.add(permissionManager.createPermission(resourceType, EDIT, permission.isUpdate()));
+        }
+        if (permission.isDelete() != null) {
+            pc.add(permissionManager.createPermission(resourceType, DELETE, permission.isDelete()));
+        }
+        if (permission.getExceptions() != null) {
+            addExceptions(pc, resourceType, permission.getExceptions());
+        }
+    }
+    private void addExceptions(PermissionCollection pc, ResourceType resourceType, List<ResourcePermissionException> exceptions) {
+            for (ResourcePermissionException exception : exceptions) {
+                Permission permission = exception.getPermissions();
+                String resourceTypeName = resourceType.getName();
+                if (permission.isRead() != null) {
+                    String permissionName = resourceTypeName + "." + READ.getName() + "." + exception.getName();
+                    pc.add(permissionManager.createPermission(permissionName, permission.isRead()));
+                }
+                if (permission.isCreate() != null) {
+                    String permissionName = resourceTypeName + "." + CREATE.getName() + "." + exception.getName();
+                    pc.add(permissionManager.createPermission(permissionName, permission.isCreate()));
+                }
+                if (permission.isUpdate() != null) {
+                    String permissionName = resourceTypeName + "." + EDIT.getName() + "." + exception.getName();
+                    pc.add(permissionManager.createPermission(permissionName, permission.isUpdate()));
+                }
+                if (permission.isDelete() != null) {
+                    String permissionName = resourceTypeName + "." + DELETE.getName() + "." + exception.getName();
+                    pc.add(permissionManager.createPermission(permissionName, permission.isDelete()));
+                }
+            }
     }
 
 

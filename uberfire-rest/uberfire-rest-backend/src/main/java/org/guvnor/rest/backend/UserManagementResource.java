@@ -41,16 +41,24 @@ import org.guvnor.rest.client.JobRequest;
 import org.guvnor.rest.client.JobResult;
 import org.guvnor.rest.client.JobStatus;
 import org.guvnor.rest.client.NewGroup;
-import org.guvnor.rest.client.RemoveSpaceRequest;
-import org.guvnor.rest.client.Space;
-import org.guvnor.rest.client.SpaceRequest;
-
+import org.guvnor.rest.client.Permission;
+import org.guvnor.rest.client.RemoveGroupRequest;
+import org.guvnor.rest.client.UpdateGroupPermissionJobRequest;
+import org.guvnor.rest.client.UpdatePermissionsRequest;
 import org.jboss.errai.security.shared.api.Group;
+import org.jboss.errai.security.shared.api.GroupImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.uberfire.backend.authz.AuthorizationService;
 import org.uberfire.ext.security.management.api.AbstractEntityManager;
 import org.uberfire.ext.security.management.api.service.GroupManagerService;
 import org.uberfire.ext.security.management.impl.SearchRequestImpl;
+import org.uberfire.security.ResourceAction;
+import org.uberfire.security.ResourceType;
+import org.uberfire.security.authz.AuthorizationPolicy;
+import org.uberfire.security.authz.PermissionCollection;
+import org.uberfire.security.authz.PermissionManager;
+import org.uberfire.security.impl.authz.DotNamedPermission;
 
 import static org.guvnor.rest.backend.PermissionConstants.REST_PROJECT_ROLE;
 import static org.guvnor.rest.backend.PermissionConstants.REST_ROLE;
@@ -96,7 +104,7 @@ public class UserManagementResource {
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    @Path("/group")
+    @Path("/groups")
     @RolesAllowed({REST_ROLE, REST_PROJECT_ROLE})
     public Response createGroup(NewGroup group) {
         logger.debug("-----createGroup--- , Group name: {}, User assigned : {}",
@@ -116,6 +124,50 @@ public class UserManagementResource {
 
         return createAcceptedStatusResponse(jobRequest);
     }
+
+    @DELETE
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/groups/{groupName}")
+    @RolesAllowed({REST_ROLE, REST_PROJECT_ROLE})
+    public Response deleteGroup(@PathParam("groupName") String groupName) {
+        logger.debug("-----deleteGroup--- , Group Name: {}",
+                     groupName);
+
+        final String id = newId();
+        final RemoveGroupRequest jobRequest = new RemoveGroupRequest();
+        jobRequest.setStatus(JobStatus.ACCEPTED);
+        jobRequest.setJobId(id);
+        jobRequest.setGroupName(groupName);
+        addAcceptedJobResult(id);
+
+        jobRequestObserver.removeGroupRequest(jobRequest);
+
+        return createAcceptedStatusResponse(jobRequest);
+    }
+
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/groups/{groupName}/permissions")
+    @RolesAllowed({REST_ROLE, REST_PROJECT_ROLE})
+    public Response updateGroupPermissions(@PathParam("groupName") String groupName, UpdatePermissionsRequest permissionRequest) {
+        logger.debug("-----updateGroupPermissions--- , Group name: {}",
+                     groupName);
+
+        final String id = newId();
+        final UpdateGroupPermissionJobRequest jobRequest = new UpdateGroupPermissionJobRequest();
+        jobRequest.setStatus(JobStatus.ACCEPTED);
+        jobRequest.setJobId(id);
+        jobRequest.setGroupName(groupName);
+        jobRequest.setPermissionsRequest(permissionRequest);
+
+        addAcceptedJobResult(id);
+
+        jobRequestObserver.updateGroupPermissionsRequest(jobRequest);
+
+        return createAcceptedStatusResponse(jobRequest);
+    }
+
     protected Variant getDefaultVariant() {
         return Variant.mediaTypes(MediaType.APPLICATION_JSON_TYPE).add().build().get(0);
     }
@@ -127,6 +179,7 @@ public class UserManagementResource {
     private String newId() {
         return "" + System.currentTimeMillis() + "-" + counter.incrementAndGet();
     }
+
     private void addAcceptedJobResult(String jobId) {
         JobResult jobResult = new JobResult();
         jobResult.setJobId(jobId);

@@ -33,9 +33,11 @@ import org.guvnor.rest.backend.cmd.CreateSpaceCmd;
 import org.guvnor.rest.backend.cmd.DeleteProjectCmd;
 import org.guvnor.rest.backend.cmd.DeployProjectCmd;
 import org.guvnor.rest.backend.cmd.InstallProjectCmd;
+import org.guvnor.rest.backend.cmd.RemoveGroupCmd;
 import org.guvnor.rest.backend.cmd.RemoveSpaceCmd;
 import org.guvnor.rest.backend.cmd.RemoveBranchCmd;
 import org.guvnor.rest.backend.cmd.TestProjectCmd;
+import org.guvnor.rest.backend.cmd.UpdateGroupPermissionsCmd;
 import org.guvnor.rest.client.AddBranchJobRequest;
 import org.guvnor.rest.client.AddProjectToSpaceRequest;
 import org.guvnor.rest.client.CloneProjectJobRequest;
@@ -48,9 +50,11 @@ import org.guvnor.rest.client.InstallProjectRequest;
 import org.guvnor.rest.client.RemoveBranchJobRequest;
 import org.guvnor.rest.client.JobRequest;
 import org.guvnor.rest.client.JobStatus;
+import org.guvnor.rest.client.RemoveGroupRequest;
 import org.guvnor.rest.client.RemoveSpaceRequest;
 import org.guvnor.rest.client.SpaceRequest;
 import org.guvnor.rest.client.TestProjectRequest;
+import org.guvnor.rest.client.UpdateGroupPermissionJobRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uberfire.commons.concurrent.Unmanaged;
@@ -215,6 +219,17 @@ public class JobRequestScheduler {
                                        params));
     }
 
+    public void updateGroupPermissionsRequest(final UpdateGroupPermissionJobRequest jobRequest) {
+        final Map<String, Object> params = getContext(jobRequest);
+        params.put("Operation",
+                   "updateGroupPermissions");
+
+        scheduleJob(jobRequest,
+                    new UpdateGroupPermissionsCmd(jobRequestHelper,
+                                                  jobResultManager,
+                                                  params));
+    }
+
     public void addProjectToSpace(final AddProjectToSpaceRequest jobRequest) {
         final Map<String, Object> params = getContext(jobRequest);
         params.put("Project",
@@ -271,6 +286,17 @@ public class JobRequestScheduler {
 
         scheduleJob(jobRequest,
                     new RemoveSpaceCmd(jobRequestHelper,
+                                       jobResultManager,
+                                       params));
+    }
+
+    public void removeGroupRequest(final RemoveGroupRequest jobRequest) {
+        final Map<String, Object> params = getContext(jobRequest);
+        params.put("Operation",
+                   "removeGroup");
+
+        scheduleJob(jobRequest,
+                    new RemoveGroupCmd(jobRequestHelper,
                                        jobResultManager,
                                        params));
     }
