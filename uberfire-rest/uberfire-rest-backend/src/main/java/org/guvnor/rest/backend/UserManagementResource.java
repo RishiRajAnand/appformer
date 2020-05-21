@@ -166,10 +166,10 @@ public class UserManagementResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    @Path("/groups")
+    @Path("/roles")
     @RolesAllowed({ADMIN_ROLE})
     public Collection<Role> getRoles() {
-        logger.debug("-----getGroups--- ");
+        logger.debug("-----getRoles--- ");
 
         final List<Role> results = roleManagerService.getAll();
         return results;
