@@ -22,8 +22,8 @@ import java.util.concurrent.ExecutorService;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
-import org.guvnor.rest.backend.cmd.AddBranchCmd;
 import org.guvnor.rest.backend.cmd.AbstractJobCommand;
+import org.guvnor.rest.backend.cmd.AddBranchCmd;
 import org.guvnor.rest.backend.cmd.AddProjectToSpaceCmd;
 import org.guvnor.rest.backend.cmd.CloneRepositoryCmd;
 import org.guvnor.rest.backend.cmd.CompileProjectCmd;
@@ -33,11 +33,12 @@ import org.guvnor.rest.backend.cmd.CreateSpaceCmd;
 import org.guvnor.rest.backend.cmd.DeleteProjectCmd;
 import org.guvnor.rest.backend.cmd.DeployProjectCmd;
 import org.guvnor.rest.backend.cmd.InstallProjectCmd;
+import org.guvnor.rest.backend.cmd.RemoveBranchCmd;
 import org.guvnor.rest.backend.cmd.RemoveGroupCmd;
 import org.guvnor.rest.backend.cmd.RemoveSpaceCmd;
-import org.guvnor.rest.backend.cmd.RemoveBranchCmd;
 import org.guvnor.rest.backend.cmd.TestProjectCmd;
 import org.guvnor.rest.backend.cmd.UpdateGroupPermissionsCmd;
+import org.guvnor.rest.backend.cmd.UpdateRolePermissionsCmd;
 import org.guvnor.rest.client.AddBranchJobRequest;
 import org.guvnor.rest.client.AddProjectToSpaceRequest;
 import org.guvnor.rest.client.CloneProjectJobRequest;
@@ -47,14 +48,15 @@ import org.guvnor.rest.client.CreateProjectJobRequest;
 import org.guvnor.rest.client.DeleteProjectRequest;
 import org.guvnor.rest.client.DeployProjectRequest;
 import org.guvnor.rest.client.InstallProjectRequest;
-import org.guvnor.rest.client.RemoveBranchJobRequest;
 import org.guvnor.rest.client.JobRequest;
 import org.guvnor.rest.client.JobStatus;
+import org.guvnor.rest.client.RemoveBranchJobRequest;
 import org.guvnor.rest.client.RemoveGroupRequest;
 import org.guvnor.rest.client.RemoveSpaceRequest;
 import org.guvnor.rest.client.SpaceRequest;
 import org.guvnor.rest.client.TestProjectRequest;
 import org.guvnor.rest.client.UpdateGroupPermissionJobRequest;
+import org.guvnor.rest.client.UpdateRolePermissionJobRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uberfire.commons.concurrent.Unmanaged;
@@ -228,6 +230,17 @@ public class JobRequestScheduler {
                     new UpdateGroupPermissionsCmd(jobRequestHelper,
                                                   jobResultManager,
                                                   params));
+    }
+
+    public void updateRolePermissionsRequest(final UpdateRolePermissionJobRequest jobRequest) {
+        final Map<String, Object> params = getContext(jobRequest);
+        params.put("Operation",
+                   "updateRolePermissions");
+
+        scheduleJob(jobRequest,
+                    new UpdateRolePermissionsCmd(jobRequestHelper,
+                                                 jobResultManager,
+                                                 params));
     }
 
     public void addProjectToSpace(final AddProjectToSpaceRequest jobRequest) {

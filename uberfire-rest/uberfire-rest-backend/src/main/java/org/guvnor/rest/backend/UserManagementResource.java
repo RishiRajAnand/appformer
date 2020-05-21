@@ -16,7 +16,6 @@
 
 package org.guvnor.rest.backend;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -32,6 +31,7 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Variant;
@@ -41,27 +41,18 @@ import org.guvnor.rest.client.JobRequest;
 import org.guvnor.rest.client.JobResult;
 import org.guvnor.rest.client.JobStatus;
 import org.guvnor.rest.client.NewGroup;
-import org.guvnor.rest.client.Permission;
 import org.guvnor.rest.client.RemoveGroupRequest;
 import org.guvnor.rest.client.UpdateGroupPermissionJobRequest;
-import org.guvnor.rest.client.UpdatePermissionsRequest;
+import org.guvnor.rest.client.UpdateRolePermissionJobRequest;
+import org.guvnor.rest.client.UpdateSettingRequest;
 import org.jboss.errai.security.shared.api.Group;
-import org.jboss.errai.security.shared.api.GroupImpl;
+import org.jboss.errai.security.shared.api.Role;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.uberfire.backend.authz.AuthorizationService;
-import org.uberfire.ext.security.management.api.AbstractEntityManager;
 import org.uberfire.ext.security.management.api.service.GroupManagerService;
-import org.uberfire.ext.security.management.impl.SearchRequestImpl;
-import org.uberfire.security.ResourceAction;
-import org.uberfire.security.ResourceType;
-import org.uberfire.security.authz.AuthorizationPolicy;
-import org.uberfire.security.authz.PermissionCollection;
-import org.uberfire.security.authz.PermissionManager;
-import org.uberfire.security.impl.authz.DotNamedPermission;
+import org.uberfire.ext.security.management.api.service.RoleManagerService;
 
-import static org.guvnor.rest.backend.PermissionConstants.REST_PROJECT_ROLE;
-import static org.guvnor.rest.backend.PermissionConstants.REST_ROLE;
+import static org.guvnor.rest.backend.PermissionConstants.ADMIN_ROLE;
 
 /**
  * REST services
@@ -78,6 +69,9 @@ public class UserManagementResource {
     GroupManagerService groupManagerService;
 
     @Inject
+    RoleManagerService roleManagerService;
+
+    @Inject
     private JobRequestScheduler jobRequestObserver;
 
     @Inject
@@ -87,17 +81,11 @@ public class UserManagementResource {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/groups")
-    @RolesAllowed({REST_ROLE, REST_PROJECT_ROLE})
+    @RolesAllowed({ADMIN_ROLE})
     public Collection<Group> getGroups() {
         logger.debug("-----getGroups--- ");
 
-        final List<Group> results = new ArrayList<Group>();
-        AbstractEntityManager.SearchResponse<Group> response = groupManagerService.search(new SearchRequestImpl("",
-                                                                                                                1, 10));
-        for (Group group : response.getResults()) {
-            results.add(group);
-        }
-
+        final List<Group> results = groupManagerService.getAll();
         return results;
     }
 
@@ -105,7 +93,7 @@ public class UserManagementResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/groups")
-    @RolesAllowed({REST_ROLE, REST_PROJECT_ROLE})
+    @RolesAllowed({ADMIN_ROLE})
     public Response createGroup(NewGroup group) {
         logger.debug("-----createGroup--- , Group name: {}, User assigned : {}",
                      group.getName(),
@@ -128,10 +116,14 @@ public class UserManagementResource {
     @DELETE
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/groups/{groupName}")
-    @RolesAllowed({REST_ROLE, REST_PROJECT_ROLE})
+    @RolesAllowed({ADMIN_ROLE})
     public Response deleteGroup(@PathParam("groupName") String groupName) {
         logger.debug("-----deleteGroup--- , Group Name: {}",
                      groupName);
+
+        assertObjectExists(groupManagerService.get(groupName),
+                           "group",
+                           groupName);
 
         final String id = newId();
         final RemoveGroupRequest jobRequest = new RemoveGroupRequest();
@@ -149,10 +141,14 @@ public class UserManagementResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/groups/{groupName}/permissions")
-    @RolesAllowed({REST_ROLE, REST_PROJECT_ROLE})
-    public Response updateGroupPermissions(@PathParam("groupName") String groupName, UpdatePermissionsRequest permissionRequest) {
+    @RolesAllowed({ADMIN_ROLE})
+    public Response updateGroupPermissions(@PathParam("groupName") String groupName, UpdateSettingRequest permissionRequest) {
         logger.debug("-----updateGroupPermissions--- , Group name: {}",
                      groupName);
+
+        assertObjectExists(groupManagerService.get(groupName),
+                           "group",
+                           groupName);
 
         final String id = newId();
         final UpdateGroupPermissionJobRequest jobRequest = new UpdateGroupPermissionJobRequest();
@@ -168,12 +164,59 @@ public class UserManagementResource {
         return createAcceptedStatusResponse(jobRequest);
     }
 
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/groups")
+    @RolesAllowed({ADMIN_ROLE})
+    public Collection<Role> getRoles() {
+        logger.debug("-----getGroups--- ");
+
+        final List<Role> results = roleManagerService.getAll();
+        return results;
+    }
+
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/roles/{rolesName}/permissions")
+    @RolesAllowed({ADMIN_ROLE})
+    public Response updateRolePermissions(@PathParam("rolesName") String rolesName, UpdateSettingRequest permissionRequest) {
+        logger.debug("-----updateGroupPermissions--- , Role name: {}",
+                     rolesName);
+
+        assertObjectExists(roleManagerService.get(rolesName),
+                           "role",
+                           rolesName);
+
+        final String id = newId();
+        final UpdateRolePermissionJobRequest jobRequest = new UpdateRolePermissionJobRequest();
+        jobRequest.setStatus(JobStatus.ACCEPTED);
+        jobRequest.setJobId(id);
+        jobRequest.setRoleName(rolesName);
+        jobRequest.setPermissionsRequest(permissionRequest);
+
+        addAcceptedJobResult(id);
+
+        jobRequestObserver.updateRolePermissionsRequest(jobRequest);
+
+        return createAcceptedStatusResponse(jobRequest);
+    }
+
     protected Variant getDefaultVariant() {
         return Variant.mediaTypes(MediaType.APPLICATION_JSON_TYPE).add().build().get(0);
     }
 
     protected Response createAcceptedStatusResponse(final JobRequest jobRequest) {
         return Response.status(Response.Status.ACCEPTED).entity(jobRequest).variant(defaultVariant).build();
+    }
+
+    protected void assertObjectExists(final Object o,
+                                      final String objectInfo,
+                                      final String objectName) {
+        if (o == null) {
+            throw new WebApplicationException(String.format("Could not find %s with name %s.", objectInfo, objectName),
+                                              Response.status(Response.Status.NOT_FOUND).build());
+        }
     }
 
     private String newId() {

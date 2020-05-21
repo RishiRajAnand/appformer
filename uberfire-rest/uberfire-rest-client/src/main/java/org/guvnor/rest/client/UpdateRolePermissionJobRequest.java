@@ -3,10 +3,10 @@ package org.guvnor.rest.client;
 import org.jboss.errai.common.client.api.annotations.Portable;
 
 @Portable
-public class UpdateGroupPermissionJobRequest extends JobRequest{
+public class UpdateRolePermissionJobRequest extends JobRequest{
 
     private UpdateSettingRequest permissionsRequest;
-    private String groupName;
+    private String roleName;
 
     public UpdateSettingRequest getPermissionsRequest() {
         return permissionsRequest;
@@ -16,11 +16,11 @@ public class UpdateGroupPermissionJobRequest extends JobRequest{
         this.permissionsRequest = permissionsRequest;
     }
 
-    public String getGroupName() {
-        return groupName;
+    public String getRoleName() {
+        return roleName;
     }
 
-    public void setGroupName(String groupName) {
-        this.groupName = groupName;
+    public void setRoleName(String roleName) {
+        this.roleName = roleName;
     }
 }

@@ -1,56 +1,56 @@
 package org.guvnor.rest.client;
 
-import java.io.Serializable;
 import java.util.List;
 
+import org.jboss.errai.common.client.api.annotations.MapsTo;
 import org.jboss.errai.common.client.api.annotations.Portable;
 
 @Portable
-public class Permission implements Serializable {
+public class Permission {
+
     private Boolean read;
     private Boolean create;
     private Boolean update;
     private Boolean delete;
+    private Boolean build;
 
-    List<ResourcePermissionException> exceptions;
+    private List<PermissionException> exceptions;
+
+    public Permission() {
+    }
+
+    public Permission(@MapsTo("read") Boolean read, @MapsTo("create") Boolean create,
+                      @MapsTo("update") Boolean update, @MapsTo("delete") Boolean delete,
+                      @MapsTo("build") Boolean build, @MapsTo("exceptions") List<PermissionException> exceptions) {
+        this.read = read;
+        this.create = create;
+        this.update = update;
+        this.delete = delete;
+        this.build = build;
+        this.exceptions = exceptions;
+    }
 
     public Boolean isRead() {
         return read;
-    }
-
-    public void setRead(Boolean read) {
-        this.read = read;
     }
 
     public Boolean isCreate() {
         return create;
     }
 
-    public void setCreate(Boolean write) {
-        this.create = write;
-    }
-
     public Boolean isUpdate() {
         return update;
-    }
-
-    public void setUpdate(Boolean update) {
-        this.update = update;
     }
 
     public Boolean isDelete() {
         return delete;
     }
 
-    public void setDelete(Boolean delete) {
-        this.delete = delete;
+    public Boolean isBuild() {
+        return build;
     }
 
-    public List<ResourcePermissionException> getExceptions() {
+    public List<PermissionException> getExceptions() {
         return exceptions;
-    }
-
-    public void setExceptions(List<ResourcePermissionException> exceptions) {
-        this.exceptions = exceptions;
     }
 }
