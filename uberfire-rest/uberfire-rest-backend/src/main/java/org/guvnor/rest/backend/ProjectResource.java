@@ -1,18 +1,18 @@
 /*
-* Copyright 2013 Red Hat, Inc. and/or its affiliates.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*      http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Copyright 2013 Red Hat, Inc. and/or its affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.guvnor.rest.backend;
 
 import java.util.ArrayList;
@@ -42,13 +42,14 @@ import javax.ws.rs.core.Variant;
 
 import org.guvnor.common.services.project.model.WorkspaceProject;
 import org.guvnor.common.services.project.service.WorkspaceProjectService;
+import org.guvnor.rest.client.AddBranchJobRequest;
+import org.guvnor.rest.client.AddBranchRequest;
+import org.guvnor.rest.client.BranchResponse;
 import org.guvnor.rest.client.CloneProjectJobRequest;
 import org.guvnor.rest.client.CloneProjectRequest;
 import org.guvnor.rest.client.CompileProjectRequest;
 import org.guvnor.rest.client.CreateProjectJobRequest;
 import org.guvnor.rest.client.CreateProjectRequest;
-import org.guvnor.rest.client.AddBranchRequest;
-import org.guvnor.rest.client.AddBranchJobRequest;
 import org.guvnor.rest.client.DeleteProjectRequest;
 import org.guvnor.rest.client.DeployProjectRequest;
 import org.guvnor.rest.client.InstallProjectRequest;
@@ -56,8 +57,6 @@ import org.guvnor.rest.client.JobRequest;
 import org.guvnor.rest.client.JobResult;
 import org.guvnor.rest.client.JobStatus;
 import org.guvnor.rest.client.ProjectResponse;
-import org.guvnor.rest.client.BranchResponse;
-import org.guvnor.rest.client.RemoveBranchRequest;
 import org.guvnor.rest.client.RemoveBranchJobRequest;
 import org.guvnor.rest.client.RemoveSpaceRequest;
 import org.guvnor.rest.client.Space;
@@ -65,15 +64,14 @@ import org.guvnor.rest.client.SpaceRequest;
 import org.guvnor.rest.client.TestProjectRequest;
 import org.guvnor.structure.organizationalunit.OrganizationalUnit;
 import org.guvnor.structure.organizationalunit.OrganizationalUnitService;
-import org.guvnor.structure.repositories.PublicURI;
 import org.guvnor.structure.repositories.Branch;
+import org.guvnor.structure.repositories.PublicURI;
 import org.kie.soup.commons.validation.PortablePreconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.uberfire.rpc.SessionInfo;
 import org.uberfire.io.IOService;
+import org.uberfire.rpc.SessionInfo;
 import org.uberfire.spaces.SpacesAPI;
-import org.jboss.errai.security.shared.api.identity.User;
 
 import static org.guvnor.rest.backend.PermissionConstants.REST_PROJECT_ROLE;
 import static org.guvnor.rest.backend.PermissionConstants.REST_ROLE;
@@ -324,11 +322,11 @@ public class ProjectResource {
                            projectName);
 
         return workspaceProject
-            .getRepository()
-            .getBranches()
-            .stream()
-            .map(this::getBranchResponse)
-            .collect(Collectors.toList());
+                .getRepository()
+                .getBranches()
+                .stream()
+                .map(this::getBranchResponse)
+                .collect(Collectors.toList());
     }
 
     @POST
@@ -453,8 +451,8 @@ public class ProjectResource {
             @PathParam("projectName") String projectName) {
 
         return compileProject(spaceName,
-                      projectName,
-                      null);
+                              projectName,
+                              null);
     }
 
     @POST
@@ -497,7 +495,8 @@ public class ProjectResource {
                               projectName,
                               null);
     }
-   @POST
+
+    @POST
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/spaces/{spaceName}/projects/{projectName}/branches/{branchName}/maven/install")
     @RolesAllowed({REST_ROLE, REST_PROJECT_ROLE})

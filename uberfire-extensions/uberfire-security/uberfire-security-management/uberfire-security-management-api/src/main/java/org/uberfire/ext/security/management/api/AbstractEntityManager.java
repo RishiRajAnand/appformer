@@ -44,9 +44,8 @@ public interface AbstractEntityManager<T, S extends Settings> {
     T get(final String identifier) throws SecurityManagementException;
 
     /**
-     * Obtain a single entity instance.
-     * @param identifier The entity's identifier.
-     * @return The entity for the given identifier.
+     * <p>The entities list of given type.</p>
+     * @return List of all the entities present for given type.
      * @throws SecurityManagementException
      */
     List<T> getAll() throws SecurityManagementException;

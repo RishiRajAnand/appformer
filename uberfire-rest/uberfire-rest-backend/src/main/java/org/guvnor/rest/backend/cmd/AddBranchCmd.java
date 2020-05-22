@@ -11,7 +11,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
 package org.guvnor.rest.backend.cmd;
 
@@ -19,6 +19,7 @@ import java.util.Map;
 
 import org.guvnor.rest.backend.JobRequestHelper;
 import org.guvnor.rest.backend.JobResultManager;
+import org.guvnor.rest.backend.ProjectJobRequestHelper;
 import org.guvnor.rest.client.AddBranchJobRequest;
 import org.guvnor.rest.client.JobRequest;
 import org.guvnor.rest.client.JobResult;
@@ -36,7 +37,7 @@ public class AddBranchCmd extends AbstractJobCommand {
 
     @Override
     public JobResult internalExecute(final JobRequest request) throws Exception {
-        JobRequestHelper helper = getHelper();
+        ProjectJobRequestHelper helper = (ProjectJobRequestHelper) getHelper();
         AddBranchJobRequest jobRequest = (AddBranchJobRequest) request;
         JobResult result = null;
 
@@ -47,7 +48,6 @@ public class AddBranchCmd extends AbstractJobCommand {
                                       jobRequest.getNewBranchName(),
                                       jobRequest.getBaseBranchName(),
                                       jobRequest.getUserIdentifier());
-
         } finally {
             JobStatus status = result != null ? result.getStatus() : JobStatus.SERVER_ERROR;
             logger.debug("-----addBranch--- , spaceName: {}, projectName: {}, newBranchName: {}, baseBranchName: {}, status: [{}]",

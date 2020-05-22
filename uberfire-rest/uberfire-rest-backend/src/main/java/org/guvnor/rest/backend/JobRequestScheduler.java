@@ -75,7 +75,10 @@ public class JobRequestScheduler {
 
     private JobResultManager jobResultManager;
 
-    private JobRequestHelper jobRequestHelper;
+    private ProjectJobRequestHelper projectJobRequestHelper;
+
+    private UserManagementJobRequestHelper userManagementJobRequestHelper;
+
 
     public JobRequestScheduler() {
 
@@ -92,10 +95,12 @@ public class JobRequestScheduler {
     @Inject
     public JobRequestScheduler(@Unmanaged ExecutorService executorService,
                                JobResultManager jobResultManager,
-                               JobRequestHelper jobRequestHelper) {
+                               ProjectJobRequestHelper projectJobRequestHelper,
+                               UserManagementJobRequestHelper userManagementJobRequestHelper) {
         this.executorService = executorService;
         this.jobResultManager = jobResultManager;
-        this.jobRequestHelper = jobRequestHelper;
+        this.projectJobRequestHelper = projectJobRequestHelper;
+        this.userManagementJobRequestHelper = userManagementJobRequestHelper;
     }
 
     public void cloneProjectRequest(final CloneProjectJobRequest jobRequest) {
@@ -106,7 +111,7 @@ public class JobRequestScheduler {
                    "cloneProject");
 
         scheduleJob(jobRequest,
-                    new CloneRepositoryCmd(jobRequestHelper,
+                    new CloneRepositoryCmd(projectJobRequestHelper,
                                            jobResultManager,
                                            params));
     }
@@ -121,7 +126,7 @@ public class JobRequestScheduler {
                    "createProject");
 
         scheduleJob(jobRequest,
-                    new CreateProjectCmd(jobRequestHelper,
+                    new CreateProjectCmd(projectJobRequestHelper,
                                          jobResultManager,
                                          params));
     }
@@ -134,7 +139,7 @@ public class JobRequestScheduler {
                    "deleteProject");
 
         scheduleJob(jobRequest,
-                    new DeleteProjectCmd(jobRequestHelper,
+                    new DeleteProjectCmd(projectJobRequestHelper,
                                          jobResultManager,
                                          params));
     }
@@ -149,7 +154,7 @@ public class JobRequestScheduler {
                    "compileProject");
 
         scheduleJob(jobRequest,
-                    new CompileProjectCmd(jobRequestHelper,
+                    new CompileProjectCmd(projectJobRequestHelper,
                                           jobResultManager,
                                           params));
     }
@@ -164,7 +169,7 @@ public class JobRequestScheduler {
                    "installProject");
 
         scheduleJob(jobRequest,
-                    new InstallProjectCmd(jobRequestHelper,
+                    new InstallProjectCmd(projectJobRequestHelper,
                                           jobResultManager,
                                           params));
     }
@@ -179,7 +184,7 @@ public class JobRequestScheduler {
                    "testProject");
 
         scheduleJob(jobRequest,
-                    new TestProjectCmd(jobRequestHelper,
+                    new TestProjectCmd(projectJobRequestHelper,
                                        jobResultManager,
                                        params));
     }
@@ -194,53 +199,9 @@ public class JobRequestScheduler {
                    "deployProject");
 
         scheduleJob(jobRequest,
-                    new DeployProjectCmd(jobRequestHelper,
+                    new DeployProjectCmd(projectJobRequestHelper,
                                          jobResultManager,
                                          params));
-    }
-
-    public void createSpaceRequest(final SpaceRequest jobRequest) {
-        final Map<String, Object> params = getContext(jobRequest);
-        params.put("Operation",
-                   "createOrgUnit");
-
-        scheduleJob(jobRequest,
-                    new CreateSpaceCmd(jobRequestHelper,
-                                       jobResultManager,
-                                       params));
-    }
-
-    public void createGroupRequest(final CreateGroupRequest jobRequest) {
-        final Map<String, Object> params = getContext(jobRequest);
-        params.put("Operation",
-                   "createGroup");
-
-        scheduleJob(jobRequest,
-                    new CreateGroupCmd(jobRequestHelper,
-                                       jobResultManager,
-                                       params));
-    }
-
-    public void updateGroupPermissionsRequest(final UpdateGroupPermissionJobRequest jobRequest) {
-        final Map<String, Object> params = getContext(jobRequest);
-        params.put("Operation",
-                   "updateGroupPermissions");
-
-        scheduleJob(jobRequest,
-                    new UpdateGroupPermissionsCmd(jobRequestHelper,
-                                                  jobResultManager,
-                                                  params));
-    }
-
-    public void updateRolePermissionsRequest(final UpdateRolePermissionJobRequest jobRequest) {
-        final Map<String, Object> params = getContext(jobRequest);
-        params.put("Operation",
-                   "updateRolePermissions");
-
-        scheduleJob(jobRequest,
-                    new UpdateRolePermissionsCmd(jobRequestHelper,
-                                                 jobResultManager,
-                                                 params));
     }
 
     public void addProjectToSpace(final AddProjectToSpaceRequest jobRequest) {
@@ -251,7 +212,7 @@ public class JobRequestScheduler {
                    "addRepositoryToOrgUnit");
 
         scheduleJob(jobRequest,
-                    new AddProjectToSpaceCmd(jobRequestHelper,
+                    new AddProjectToSpaceCmd(projectJobRequestHelper,
                                              jobResultManager,
                                              params));
     }
@@ -270,7 +231,7 @@ public class JobRequestScheduler {
                    "addBranch");
 
         scheduleJob(jobRequest,
-                    new AddBranchCmd(jobRequestHelper,
+                    new AddBranchCmd(projectJobRequestHelper,
                                      jobResultManager,
                                      params));
     }
@@ -287,7 +248,7 @@ public class JobRequestScheduler {
                    "addBranch");
 
         scheduleJob(jobRequest,
-                    new RemoveBranchCmd(jobRequestHelper,
+                    new RemoveBranchCmd(projectJobRequestHelper,
                                         jobResultManager,
                                         params));
     }
@@ -298,10 +259,56 @@ public class JobRequestScheduler {
                    "removeOrgUnit");
 
         scheduleJob(jobRequest,
-                    new RemoveSpaceCmd(jobRequestHelper,
+                    new RemoveSpaceCmd(projectJobRequestHelper,
                                        jobResultManager,
                                        params));
     }
+
+    public void createSpaceRequest(final SpaceRequest jobRequest) {
+        final Map<String, Object> params = getContext(jobRequest);
+        params.put("Operation",
+                   "createOrgUnit");
+
+        scheduleJob(jobRequest,
+                    new CreateSpaceCmd(projectJobRequestHelper,
+                                       jobResultManager,
+                                       params));
+    }
+
+    public void createGroupRequest(final CreateGroupRequest jobRequest) {
+        final Map<String, Object> params = getContext(jobRequest);
+        params.put("Operation",
+                   "createGroup");
+
+        scheduleJob(jobRequest,
+                    new CreateGroupCmd(userManagementJobRequestHelper,
+                                       jobResultManager,
+                                       params));
+    }
+
+    public void updateGroupPermissionsRequest(final UpdateGroupPermissionJobRequest jobRequest) {
+        final Map<String, Object> params = getContext(jobRequest);
+        params.put("Operation",
+                   "updateGroupPermissions");
+
+        scheduleJob(jobRequest,
+                    new UpdateGroupPermissionsCmd(userManagementJobRequestHelper,
+                                                  jobResultManager,
+                                                  params));
+    }
+
+    public void updateRolePermissionsRequest(final UpdateRolePermissionJobRequest jobRequest) {
+        final Map<String, Object> params = getContext(jobRequest);
+        params.put("Operation",
+                   "updateRolePermissions");
+
+        scheduleJob(jobRequest,
+                    new UpdateRolePermissionsCmd(userManagementJobRequestHelper,
+                                                 jobResultManager,
+                                                 params));
+    }
+
+
 
     public void removeGroupRequest(final RemoveGroupRequest jobRequest) {
         final Map<String, Object> params = getContext(jobRequest);
@@ -309,7 +316,7 @@ public class JobRequestScheduler {
                    "removeGroup");
 
         scheduleJob(jobRequest,
-                    new RemoveGroupCmd(jobRequestHelper,
+                    new RemoveGroupCmd(userManagementJobRequestHelper,
                                        jobResultManager,
                                        params));
     }

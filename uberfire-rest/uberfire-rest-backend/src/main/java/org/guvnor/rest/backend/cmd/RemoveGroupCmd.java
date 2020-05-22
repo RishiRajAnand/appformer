@@ -4,11 +4,11 @@ import java.util.Map;
 
 import org.guvnor.rest.backend.JobRequestHelper;
 import org.guvnor.rest.backend.JobResultManager;
+import org.guvnor.rest.backend.UserManagementJobRequestHelper;
 import org.guvnor.rest.client.JobRequest;
 import org.guvnor.rest.client.JobResult;
 import org.guvnor.rest.client.JobStatus;
 import org.guvnor.rest.client.RemoveGroupRequest;
-import org.guvnor.rest.client.RemoveSpaceRequest;
 
 public class RemoveGroupCmd extends AbstractJobCommand {
 
@@ -22,7 +22,7 @@ public class RemoveGroupCmd extends AbstractJobCommand {
 
     @Override
     public JobResult internalExecute(JobRequest request) throws Exception {
-        JobRequestHelper helper = getHelper();
+        UserManagementJobRequestHelper helper = (UserManagementJobRequestHelper) getHelper();
         RemoveGroupRequest jobRequest = (RemoveGroupRequest) request;
 
         JobResult result = null;

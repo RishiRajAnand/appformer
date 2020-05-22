@@ -64,7 +64,7 @@ public class JobRequestHelperCreateModuleTest {
     private OrganizationalUnitService organizationalUnitService;
 
     @InjectMocks
-    private JobRequestHelper jobRequestHelper = new JobRequestHelper();
+    private ProjectJobRequestHelper jobRequestHelper = new ProjectJobRequestHelper();
 
     @Before
     public void setUp() throws Exception {

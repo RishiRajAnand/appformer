@@ -11,7 +11,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
 package org.guvnor.rest.backend.cmd;
 
@@ -19,6 +19,7 @@ import java.util.Map;
 
 import org.guvnor.rest.backend.JobRequestHelper;
 import org.guvnor.rest.backend.JobResultManager;
+import org.guvnor.rest.backend.ProjectJobRequestHelper;
 import org.guvnor.rest.client.JobRequest;
 import org.guvnor.rest.client.JobResult;
 import org.guvnor.rest.client.JobStatus;
@@ -36,7 +37,7 @@ public class TestProjectCmd extends AbstractJobCommand {
 
     @Override
     public JobResult internalExecute(JobRequest request) throws Exception {
-        JobRequestHelper helper = getHelper();
+        ProjectJobRequestHelper helper = (ProjectJobRequestHelper) getHelper();
         TestProjectRequest jobRequest = (TestProjectRequest) request;
 
         JobResult result = null;
