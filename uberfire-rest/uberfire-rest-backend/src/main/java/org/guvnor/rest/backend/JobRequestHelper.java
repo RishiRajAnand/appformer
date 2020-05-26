@@ -15,12 +15,9 @@
  */
 package org.guvnor.rest.backend;
 
-import javax.enterprise.context.ApplicationScoped;
-
 /**
- * Utility class to perform various functions for the REST service involving backend services
+ * <p>The Job request helpers provides various functions for the REST service involving backend services</p>
  */
-
 public interface JobRequestHelper {
 
 }

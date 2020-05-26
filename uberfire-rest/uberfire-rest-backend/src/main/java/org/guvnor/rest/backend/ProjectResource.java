@@ -77,7 +77,7 @@ import static org.guvnor.rest.backend.PermissionConstants.REST_PROJECT_ROLE;
 import static org.guvnor.rest.backend.PermissionConstants.REST_ROLE;
 
 /**
- * REST services
+ * REST services for project management related operations
  */
 @Path("/")
 @Named

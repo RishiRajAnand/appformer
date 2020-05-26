@@ -19,9 +19,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Variant;
 
 import org.guvnor.common.services.project.service.WorkspaceProjectService;
+import org.guvnor.rest.client.AddBranchRequest;
 import org.guvnor.rest.client.CloneProjectRequest;
 import org.guvnor.rest.client.CreateProjectRequest;
-import org.guvnor.rest.client.AddBranchRequest;
 import org.guvnor.rest.client.JobRequest;
 import org.guvnor.rest.client.JobResult;
 import org.guvnor.rest.client.JobStatus;
@@ -40,8 +40,8 @@ import org.uberfire.rpc.SessionInfo;
 import org.uberfire.spaces.SpacesAPI;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)

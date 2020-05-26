@@ -1,5 +1,5 @@
 /*
- * Copyright 2020s Red Hat, Inc. and/or its affiliates.
+ * Copyright 2020 Red Hat, Inc. and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ import org.uberfire.ext.security.management.api.service.RoleManagerService;
 import static org.guvnor.rest.backend.PermissionConstants.ADMIN_ROLE;
 
 /**
- * REST services
+ * REST services for user management operations
  */
 @Path("/")
 @Named

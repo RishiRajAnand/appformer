@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Red Hat, Inc. and/or its affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.guvnor.rest.backend;
 
 import java.util.List;
@@ -18,7 +34,9 @@ import org.jboss.errai.security.shared.api.GroupImpl;
 import org.jboss.errai.security.shared.api.Role;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.uberfire.annotations.Customizable;
 import org.uberfire.backend.authz.AuthorizationService;
+import org.uberfire.ext.security.management.api.RestWorkbenchEnties;
 import org.uberfire.ext.security.management.api.exception.GroupNotFoundException;
 import org.uberfire.ext.security.management.api.service.GroupManagerService;
 import org.uberfire.ext.security.management.api.service.RoleManagerService;
@@ -59,9 +77,14 @@ public class UserManagementJobRequestHelper implements JobRequestHelper {
     @Inject
     private PermissionManager permissionManager;
 
+    @Inject
+    @Customizable
+    private RestWorkbenchEnties restWorkbenchEnties;
+
     public JobResult createGroup(final String jobId,
                                  final String groupName,
                                  final List<String> users) {
+        List<String> party = restWorkbenchEnties.getAllEditorId();
 
         JobResult result = new JobResult();
         result.setJobId(jobId);
@@ -139,8 +162,8 @@ public class UserManagementJobRequestHelper implements JobRequestHelper {
         try {
             Group group = groupManagerService.get(groupName);
             AuthorizationPolicy authzPolicy = permissionManager.getAuthorizationPolicy();
-//        role.admin.permission.project.update=true
-            if (permissionsRequest.getHomePage() != null) {
+
+            if (permissionsRequest.getHomePage() != null && isValidResourceType(ActivityResourceType.PERSPECTIVE, permissionsRequest.getHomePage())) {
                 authzPolicy.setHomePerspective(group, permissionsRequest.getHomePage());
             }
             if (permissionsRequest.getPriority() != null) {
@@ -185,7 +208,7 @@ public class UserManagementJobRequestHelper implements JobRequestHelper {
             Role role = roleManagerService.get(roleName);
             if (role != null) {
                 AuthorizationPolicy authzPolicy = permissionManager.getAuthorizationPolicy();
-                if (permissionsRequest.getHomePage() != null) {
+                if (permissionsRequest.getHomePage() != null && isValidResourceType(ActivityResourceType.PERSPECTIVE, permissionsRequest.getHomePage())) {
                     authzPolicy.setHomePerspective(role, permissionsRequest.getHomePage());
                 }
                 if (permissionsRequest.getPriority() != null) {
@@ -284,22 +307,30 @@ public class UserManagementJobRequestHelper implements JobRequestHelper {
         for (PermissionException exception : exceptions) {
             Permission permission = exception.getPermissions();
             String resourceTypeName = resourceType.getName();
-            if (permission.isRead() != null) {
-                final String permissionName = resourceTypeName + "." + READ.getName() + "." + exception.getResourceName();
-                pc.add(permissionManager.createPermission(permissionName, permission.isRead()));
-            }
-            if (permission.isCreate() != null) {
-                final String permissionName = resourceTypeName + "." + CREATE.getName() + "." + exception.getResourceName();
-                pc.add(permissionManager.createPermission(permissionName, permission.isCreate()));
-            }
-            if (permission.isUpdate() != null) {
-                final String permissionName = resourceTypeName + "." + UPDATE.getName() + "." + exception.getResourceName();
-                pc.add(permissionManager.createPermission(permissionName, permission.isUpdate()));
-            }
-            if (permission.isDelete() != null) {
-                final String permissionName = resourceTypeName + "." + DELETE.getName() + "." + exception.getResourceName();
-                pc.add(permissionManager.createPermission(permissionName, permission.isDelete()));
+            if (isValidResourceType(resourceType, exception.getResourceName())) {
+                if (permission.isRead() != null) {
+                    final String permissionName = resourceTypeName + "." + READ.getName() + "." + exception.getResourceName();
+                    pc.add(permissionManager.createPermission(permissionName, permission.isRead()));
+                }
+                if (permission.isCreate() != null) {
+                    final String permissionName = resourceTypeName + "." + CREATE.getName() + "." + exception.getResourceName();
+                    pc.add(permissionManager.createPermission(permissionName, permission.isCreate()));
+                }
+                if (permission.isUpdate() != null) {
+                    final String permissionName = resourceTypeName + "." + UPDATE.getName() + "." + exception.getResourceName();
+                    pc.add(permissionManager.createPermission(permissionName, permission.isUpdate()));
+                }
+                if (permission.isDelete() != null) {
+                    final String permissionName = resourceTypeName + "." + DELETE.getName() + "." + exception.getResourceName();
+                    pc.add(permissionManager.createPermission(permissionName, permission.isDelete()));
+                }
             }
         }
     }
+
+    private boolean isValidResourceType(ResourceType resourceType, String resourceId) {
+        return resourceType.equals(ActivityResourceType.PERSPECTIVE) && restWorkbenchEnties.getAllPerpective().contains(resourceId) ||
+                resourceType.equals(ActivityResourceType.EDITOR) && restWorkbenchEnties.getAllEditorId().contains(resourceId);
+    }
 }
+
