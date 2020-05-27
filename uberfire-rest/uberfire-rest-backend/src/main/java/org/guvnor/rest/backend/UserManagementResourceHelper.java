@@ -16,13 +16,14 @@
 
 package org.guvnor.rest.backend;
 
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.ws.rs.core.Response;
 
-import org.guvnor.rest.client.JobResult;
-import org.guvnor.rest.client.JobStatus;
 import org.guvnor.rest.client.NewUser;
 import org.guvnor.rest.client.Permission;
 import org.guvnor.rest.client.PermissionException;
@@ -33,6 +34,8 @@ import org.guvnor.structure.repositories.Repository;
 import org.jboss.errai.security.shared.api.Group;
 import org.jboss.errai.security.shared.api.GroupImpl;
 import org.jboss.errai.security.shared.api.Role;
+import org.jboss.errai.security.shared.api.identity.User;
+import org.jboss.errai.security.shared.api.identity.UserImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uberfire.annotations.Customizable;
@@ -55,7 +58,7 @@ import static org.guvnor.structure.security.RepositoryAction.UPDATE;
 import static org.uberfire.security.ResourceAction.READ;
 
 @ApplicationScoped
-public class UserManagementJobRequestHelper implements JobRequestHelper {
+public class UserManagementResourceHelper implements JobRequestHelper {
 
     private static final Logger logger = LoggerFactory.getLogger(UserManagementJobRequestHelper.class);
 
@@ -86,136 +89,151 @@ public class UserManagementJobRequestHelper implements JobRequestHelper {
     @Customizable
     private RestWorkbenchEnties restWorkbenchEnties;
 
-    public JobResult createGroup(final String jobId,
-                                 final String groupName,
-                                 final List<String> users) {
+    public Response createGroup(final String groupName,
+                                final List<String> users) {
         List<String> party = restWorkbenchEnties.getAllEditorId();
 
-        JobResult result = new JobResult();
-        result.setJobId(jobId);
-
         if (groupName == null) {
-            result.setStatus(JobStatus.RESOURCE_NOT_EXIST);
-            result.setResult("Group name cannot be empty");
-            return result;
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("Group name cannot be empty")
+                    .build();
         }
         Group group;
         try {
             group = groupManagerService.get(groupName);
             if (group != null) {
-                result.setStatus(JobStatus.DUPLICATE_RESOURCE);
-                result.setResult("Group with name " + groupName + " already exists");
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity("Group with name " + groupName + " already exists")
+                        .build();
             } else {
                 group = groupManagerService.create(new GroupImpl(groupName));
                 groupManagerService.assignUsers(groupName, users);
                 if (group != null) {
-                    result.setResult("Group " + group.getName() + " is created successfully.");
-                    result.setStatus(JobStatus.SUCCESS);
+                    return Response.status(Response.Status.OK)
+                            .entity("Group " + group.getName() + " is created successfully.")
+                            .build();
                 } else {
-                    result.setStatus(JobStatus.FAIL);
+                    return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                            .build();
                 }
             }
         } catch (Exception e) {
-            result.setStatus(JobStatus.FAIL);
             String errMsg = e.getClass().getSimpleName() + " thrown when trying to create '" + groupName + "': " + e.getMessage();
-            result.setResult(errMsg);
-            logger.error(errMsg,
-                         e);
+            logger.error(errMsg, e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(errMsg)
+                    .build();
         }
-        return result;
     }
 
-    public JobResult createUser(NewUser newUser) {
-        return null;
-    }
-
-    public JobResult removeGroup(final String jobId,
-                                 final String groupName) {
-        JobResult result = new JobResult();
-        result.setJobId(jobId);
-
-        if (groupName == null) {
-            result.setStatus(JobStatus.BAD_REQUEST);
-            result.setResult("Group name must be provided");
-            return result;
+    public Response createUser(NewUser newUser) {
+        if (newUser.getName() == null) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("User name cannot be empty")
+                    .build();
         }
 
         try {
-            groupManagerService.delete(groupName);
-            result.setStatus(JobStatus.SUCCESS);
-            result.setResult("Group " + groupName + " is deleted successfully.");
+            User user;
+            user = userManagerService.get(newUser.getName());
+            if (user != null) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity("User with name " + newUser.getName() + " already exists")
+                        .build();
+            } else {
+                user = createUserObject(newUser);
+                User userCreated = userManagerService.create(user);
+                if (userCreated != null) {
+                    return Response.status(Response.Status.OK)
+                            .entity("User " + userCreated.getIdentifier() + " is created successfully.")
+                            .build();
+                } else {
+                    return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                            .build();
+                }
+            }
         } catch (Exception e) {
-            result.setStatus(JobStatus.FAIL);
-            String errMsg = e.getClass().getSimpleName() + " thrown when trying to remove '" + groupName + "': " + e.getMessage();
-            result.setResult(errMsg);
-            logger.error(errMsg,
-                         e);
+            String errMsg = e.getClass().getSimpleName() + " thrown when trying to create '" + newUser.getName() + "': " + e.getMessage();
+            logger.error(errMsg, e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(errMsg)
+                    .build();
         }
-
-        return result;
     }
 
-    public JobResult assignGroupsToUser(final String jobId,
-                                        final String userName,
-                                        final List<String> groups) {
+    public Response removeGroup(final String groupName) {
+        if (groupName == null) {
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity("Group name must be provided")
+                    .build();
+        }
+        try {
+            groupManagerService.delete(groupName);
+            return Response.status(Response.Status.OK)
+                    .entity("Group " + groupName + " is deleted successfully.")
+                    .build();
+        } catch (Exception e) {
+            String errMsg = e.getClass().getSimpleName() + " thrown when trying to remove '" + groupName + "': " + e.getMessage();
+            logger.error(errMsg, e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(errMsg)
+                    .build();
+        }
+    }
 
-        JobResult result = new JobResult();
-        result.setJobId(jobId);
+    public Response assignGroupsToUser(final String userName,
+                                       final List<String> groups) {
 
         if (userName == null) {
-            result.setStatus(JobStatus.BAD_REQUEST);
-            result.setResult("User name cannot be empty");
-            return result;
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("User name cannot be empty")
+                    .build();
         }
 
         try {
             userManagerService.assignGroups(userName, groups);
+            return Response.status(Response.Status.OK)
+                    .entity("Groups" + groups + " are assigned successfully to user " + userName)
+                    .build();
         } catch (Exception e) {
-            result.setStatus(JobStatus.FAIL);
             String errMsg = e.getClass().getSimpleName() + " thrown when trying to assign groups to user  '" + userName + "': " + e.getMessage();
-            result.setResult(errMsg);
             logger.error(errMsg, e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(errMsg)
+                    .build();
         }
-
-        return result;
     }
 
-    public JobResult assignRolesToUser(final String jobId,
-                                       final String userName,
-                                       final List<String> roles) {
-
-        JobResult result = new JobResult();
-        result.setJobId(jobId);
+    public Response assignRolesToUser(final String userName,
+                                      final List<String> roles) {
 
         if (userName == null) {
-            result.setStatus(JobStatus.BAD_REQUEST);
-            result.setResult("User name cannot be empty");
-            return result;
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("User name cannot be empty")
+                    .build();
         }
 
         try {
             userManagerService.assignRoles(userName, roles);
+            return Response.status(Response.Status.OK)
+                    .entity("Roles" + roles + " are assigned successfully to user " + userName)
+                    .build();
         } catch (Exception e) {
-            result.setStatus(JobStatus.FAIL);
             String errMsg = e.getClass().getSimpleName() + " thrown when trying to assign roles to user  '" + userName + "': " + e.getMessage();
-            result.setResult(errMsg);
             logger.error(errMsg, e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(errMsg)
+                    .build();
         }
-
-        return result;
     }
 
-    public JobResult updateGroupPermissions(final String jobId,
-                                            final String groupName,
-                                            final UpdateSettingRequest permissionsRequest) {
-
-        JobResult result = new JobResult();
-        result.setJobId(jobId);
+    public Response updateGroupPermissions(final String groupName,
+                                           final UpdateSettingRequest permissionsRequest) {
 
         if (groupName == null) {
-            result.setStatus(JobStatus.BAD_REQUEST);
-            result.setResult("Group name cannot be empty");
-            return result;
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("Group name cannot be empty")
+                    .build();
         }
 
         try {
@@ -235,32 +253,29 @@ public class UserManagementJobRequestHelper implements JobRequestHelper {
 
             authorizationService.savePolicy(authzPolicy);
 
-            result.setStatus(JobStatus.SUCCESS);
-            result.setResult("Group" + groupName + " permissions are updated successfully.");
+            return Response.status(Response.Status.OK)
+                    .entity("Group" + groupName + " permissions are updated successfully.")
+                    .build();
         } catch (GroupNotFoundException e) {
-            result.setStatus(JobStatus.BAD_REQUEST);
-            result.setResult("Group with name " + groupName + "doesn't exists");
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("Group with name " + groupName + "doesn't exists")
+                    .build();
         } catch (Exception e) {
-            result.setStatus(JobStatus.FAIL);
             String errMsg = e.getClass().getSimpleName() + " thrown when trying to update permissions for  '" + groupName + "': " + e.getMessage();
-            result.setResult(errMsg);
             logger.error(errMsg, e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(errMsg)
+                    .build();
         }
-
-        return result;
     }
 
-    public JobResult updateRolePermissions(final String jobId,
-                                           final String roleName,
-                                           final UpdateSettingRequest permissionsRequest) {
-
-        JobResult result = new JobResult();
-        result.setJobId(jobId);
+    public Response updateRolePermissions(final String roleName,
+                                          final UpdateSettingRequest permissionsRequest) {
 
         if (roleName == null) {
-            result.setStatus(JobStatus.BAD_REQUEST);
-            result.setResult("Role name cannot be empty");
-            return result;
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("Role name cannot be empty")
+                    .build();
         }
 
         try {
@@ -280,20 +295,21 @@ public class UserManagementJobRequestHelper implements JobRequestHelper {
 
                 authorizationService.savePolicy(authzPolicy);
 
-                result.setStatus(JobStatus.SUCCESS);
-                result.setResult("Role" + roleName + " permissions are updated successfully.");
+                return Response.status(Response.Status.OK)
+                        .entity("Role" + roleName + " permissions are updated successfully.")
+                        .build();
             } else {
-                result.setStatus(JobStatus.BAD_REQUEST);
-                result.setResult("Role with name " + roleName + "doesn't exists");
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity("Role with name " + roleName + "doesn't exists")
+                        .build();
             }
         } catch (Exception e) {
-            result.setStatus(JobStatus.FAIL);
             String errMsg = e.getClass().getSimpleName() + " thrown when trying to update permissions for  '" + roleName + "': " + e.getMessage();
-            result.setResult(errMsg);
             logger.error(errMsg, e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(errMsg)
+                    .build();
         }
-
-        return result;
     }
 
     private PermissionCollection generatePermissionCollection(PermissionCollection pc, UpdateSettingRequest permissionRequest) {
@@ -390,6 +406,31 @@ public class UserManagementJobRequestHelper implements JobRequestHelper {
     private boolean isValidResourceType(ResourceType resourceType, String resourceId) {
         return (resourceType.equals(ActivityResourceType.PERSPECTIVE) && restWorkbenchEnties.getAllPerpective().contains(resourceId)) ||
                 (resourceType.equals(ActivityResourceType.EDITOR) && restWorkbenchEnties.getAllEditorId().contains(resourceId));
+    }
+
+    private User createUserObject(NewUser newUser) {
+        final Collection<Role> userRoles = new HashSet<>();
+        final Collection<Group> userGroups = new HashSet<>();
+        if (newUser.getName() == null) {
+            return null;
+        }
+        if (newUser.getRoles() != null) {
+            for (final String roleName : newUser.getRoles()) {
+                Role role = roleManagerService.get(roleName);
+                if (role != null) {
+                    userRoles.add(role);
+                }
+            }
+        }
+        if (newUser.getGroups() != null) {
+            for (final String groupName : newUser.getGroups()) {
+                Group group = groupManagerService.get(groupName);
+                if (group != null) {
+                    userGroups.add(group);
+                }
+            }
+        }
+        return new UserImpl(newUser.getName(), userRoles, userGroups);
     }
 }
 

@@ -36,21 +36,27 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Variant;
 
+import org.guvnor.rest.client.AssignGroupsToUserJobRequest;
+import org.guvnor.rest.client.AssignRolesToUserJobRequest;
 import org.guvnor.rest.client.CreateGroupRequest;
 import org.guvnor.rest.client.JobRequest;
 import org.guvnor.rest.client.JobResult;
 import org.guvnor.rest.client.JobStatus;
 import org.guvnor.rest.client.NewGroup;
+import org.guvnor.rest.client.NewUser;
 import org.guvnor.rest.client.RemoveGroupRequest;
 import org.guvnor.rest.client.UpdateGroupPermissionJobRequest;
 import org.guvnor.rest.client.UpdateRolePermissionJobRequest;
 import org.guvnor.rest.client.UpdateSettingRequest;
 import org.jboss.errai.security.shared.api.Group;
 import org.jboss.errai.security.shared.api.Role;
+import org.jboss.errai.security.shared.api.identity.User;
+import org.jboss.errai.security.shared.api.identity.UserImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.uberfire.ext.security.management.api.service.GroupManagerService;
 import org.uberfire.ext.security.management.api.service.RoleManagerService;
+import org.uberfire.ext.security.management.api.service.UserManagerService;
 
 import static org.guvnor.rest.backend.PermissionConstants.ADMIN_ROLE;
 
@@ -72,7 +78,13 @@ public class UserManagementResource {
     RoleManagerService roleManagerService;
 
     @Inject
+    UserManagerService userManagerService;
+
+    @Inject
     private JobRequestScheduler jobRequestObserver;
+
+    @Inject
+    private UserManagementResourceHelper jobRequestHelper;
 
     @Inject
     private JobResultManager jobManager;
@@ -200,6 +212,100 @@ public class UserManagementResource {
         jobRequestObserver.updateRolePermissionsRequest(jobRequest);
 
         return createAcceptedStatusResponse(jobRequest);
+    }
+
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/users/{userName}/assignGroups")
+    @RolesAllowed({ADMIN_ROLE})
+    public Response assignGroupsToUsers(@PathParam("userName") String userName, List<String> groups) {
+        logger.debug("-----assignGroupsToUsers--- , User name: {}",
+                     userName);
+
+        assertObjectExists(userManagerService.get(userName),
+                           "user",
+                           userName);
+
+        final String id = newId();
+        final AssignGroupsToUserJobRequest jobRequest = new AssignGroupsToUserJobRequest();
+        jobRequest.setJobId(id);
+        jobRequest.setUserName(userName);
+        jobRequest.setGroups(groups);
+
+        addAcceptedJobResult(id);
+
+        jobRequestObserver.assignGroupsToUserRequest(jobRequest);
+
+        return createAcceptedStatusResponse(jobRequest);
+    }
+
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/users/{userName}/assignRoles")
+    @RolesAllowed({ADMIN_ROLE})
+    public Response assignRolesToUsers(@PathParam("userName") String userName, List<String> roles) {
+        logger.debug("-----assignRolesToUsers--- , User name: {}",
+                     userName);
+
+        assertObjectExists(userManagerService.get(userName),
+                           "user",
+                           userName);
+
+        final String id = newId();
+        final AssignRolesToUserJobRequest jobRequest = new AssignRolesToUserJobRequest();
+        jobRequest.setJobId(id);
+        jobRequest.setUserName(userName);
+        jobRequest.setRoles(roles);
+
+        addAcceptedJobResult(id);
+
+        jobRequestObserver.assignRolesToUserRequest(jobRequest);
+
+        return createAcceptedStatusResponse(jobRequest);
+    }
+
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/users")
+    @RolesAllowed({ADMIN_ROLE})
+    public Response createUsers(NewUser newUser) {
+        logger.debug("-----createUsers--- , User name: {}",
+                     newUser.getName());
+
+
+        return jobRequestHelper.createUser(newUser);
+
+    }
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/users/{userName}/roles")
+    @RolesAllowed({ADMIN_ROLE})
+    public Collection<Role> getUserRoles(@PathParam("userName") String userName) {
+        logger.debug("-----getUserRoles--- ");
+
+        final User user = userManagerService.getUser(userName);
+        assertObjectExists(user,
+                           "user",
+                           userName);
+        return user.getRoles();
+    }
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/users/{userName}/groups")
+    @RolesAllowed({ADMIN_ROLE})
+    public Collection<Group> getUserGroups(@PathParam("userName") String userName) {
+        logger.debug("-----getUserGroups--- ");
+
+        final User user = userManagerService.getUser(userName);
+        assertObjectExists(user,
+                           "user",
+                           userName);
+        return user.getGroups();
     }
 
     protected Variant getDefaultVariant() {

@@ -25,6 +25,8 @@ import javax.inject.Inject;
 import org.guvnor.rest.backend.cmd.AbstractJobCommand;
 import org.guvnor.rest.backend.cmd.AddBranchCmd;
 import org.guvnor.rest.backend.cmd.AddProjectToSpaceCmd;
+import org.guvnor.rest.backend.cmd.AssignGroupsToUsersCmd;
+import org.guvnor.rest.backend.cmd.AssignRolesToUsersCmd;
 import org.guvnor.rest.backend.cmd.CloneRepositoryCmd;
 import org.guvnor.rest.backend.cmd.CompileProjectCmd;
 import org.guvnor.rest.backend.cmd.CreateGroupCmd;
@@ -41,6 +43,8 @@ import org.guvnor.rest.backend.cmd.UpdateGroupPermissionsCmd;
 import org.guvnor.rest.backend.cmd.UpdateRolePermissionsCmd;
 import org.guvnor.rest.client.AddBranchJobRequest;
 import org.guvnor.rest.client.AddProjectToSpaceRequest;
+import org.guvnor.rest.client.AssignGroupsToUserJobRequest;
+import org.guvnor.rest.client.AssignRolesToUserJobRequest;
 import org.guvnor.rest.client.CloneProjectJobRequest;
 import org.guvnor.rest.client.CompileProjectRequest;
 import org.guvnor.rest.client.CreateGroupRequest;
@@ -307,8 +311,27 @@ public class JobRequestScheduler {
                                                  jobResultManager,
                                                  params));
     }
+    public void assignGroupsToUserRequest(final AssignGroupsToUserJobRequest jobRequest) {
+        final Map<String, Object> params = getContext(jobRequest);
+        params.put("Operation",
+                   "assignGroupsToUser");
 
+        scheduleJob(jobRequest,
+                    new AssignGroupsToUsersCmd(userManagementJobRequestHelper,
+                                               jobResultManager,
+                                               params));
+    }
 
+    public void assignRolesToUserRequest(final AssignRolesToUserJobRequest jobRequest) {
+        final Map<String, Object> params = getContext(jobRequest);
+        params.put("Operation",
+                   "assignRolesToUser");
+
+        scheduleJob(jobRequest,
+                    new AssignRolesToUsersCmd(userManagementJobRequestHelper,
+                                              jobResultManager,
+                                              params));
+    }
 
     public void removeGroupRequest(final RemoveGroupRequest jobRequest) {
         final Map<String, Object> params = getContext(jobRequest);
