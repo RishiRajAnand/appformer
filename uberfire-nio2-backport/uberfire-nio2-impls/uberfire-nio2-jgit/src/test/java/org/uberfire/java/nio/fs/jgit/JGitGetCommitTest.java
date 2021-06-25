@@ -31,7 +31,7 @@ public class JGitGetCommitTest extends AbstractTestInfra {
 
     private Git git;
 
-    private static final String MASTER_BRANCH = "master";
+    private static final String MASTER_BRANCH = "main";
 
     @Before
     public void setup() throws IOException {
